@@ -13,9 +13,12 @@
 >   [@ryanstoic](https://github.com/ryanstoic), plus hardening so the hash
 >   lookup accepts both single- and double-quoted values (the original PR
 >   only handled double quotes).
-> - `User.description_urls` and `User.withheld_in_countries` (both the
->   authenticated and guest-mode `User` classes) now tolerate X omitting
->   those fields from the response, instead of raising `KeyError`.
+> - `User.description_urls`, `User.withheld_in_countries`, and
+>   `User.pinned_tweet_ids` (both the authenticated and guest-mode `User`
+>   classes) now tolerate X omitting those fields from the response,
+>   instead of raising `KeyError`. `pinned_tweet_ids_str` in particular is
+>   commonly missing for accounts that have never pinned a tweet
+>   (observed on several corporate/official accounts).
 >
 > **Install this fork directly:**
 > ```
