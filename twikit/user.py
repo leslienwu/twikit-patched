@@ -123,6 +123,10 @@ class User:
         self.translator_type: str = legacy['translator_type']
         self.withheld_in_countries: list[str] = legacy.get('withheld_in_countries', [])
         self.protected: bool = legacy.get('protected', False)
+        # Whether this user follows the authenticated account (not populated
+        # by every endpoint — None means "unknown", not "false").
+        self.followed_by: bool | None = legacy.get('followed_by')
+        self.following: bool | None = legacy.get('following')
 
     @property
     def created_at_datetime(self) -> datetime:

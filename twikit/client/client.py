@@ -3811,14 +3811,19 @@ class Client:
             else:
                 tweet = None
 
-            from_users  = user_actions['fromUsers']
-            if from_users and 'user' in from_users[0]:
-                user_id = from_users[0]['user']['id']
-                user = users[user_id]
-            else:
-                user = None
+            from_users_raw = user_actions['fromUsers']
+            # X's API caps aggregated notifications ("X and N others liked
+            # your post") at 10 entries in fromUsers, even when the
+            # notification text reports a larger total — that's a
+            # platform-side truncation, not something we can recover here.
+            all_users = [
+                users[fu['user']['id']]
+                for fu in from_users_raw
+                if 'user' in fu and fu['user']['id'] in users
+            ]
+            user = all_users[0] if all_users else None
 
-            notifications.append(Notification(self, notification, tweet, user))
+            notifications.append(Notification(self, notification, tweet, user, all_users))
 
         entries = find_dict(response, 'entries', find_one=True)[0]
         cursor_bottom_entry = [

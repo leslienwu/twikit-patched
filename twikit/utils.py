@@ -222,7 +222,9 @@ def build_user_data(raw_data: dict) -> dict:
             'translator_type': raw_data.get('translator_type'),
             'withheld_in_countries': raw_data.get('withheld_in_countries'),
             'url': raw_data.get('url'),
-            'profile_banner_url': raw_data.get('profile_banner_url')
+            'profile_banner_url': raw_data.get('profile_banner_url'),
+            'followed_by': raw_data.get('followed_by'),
+            'following': raw_data.get('following')
         }
     }
 
