@@ -189,42 +189,75 @@ def build_tweet_data(raw_data: dict) -> dict:
 
 
 def build_user_data(raw_data: dict) -> dict:
+    # X currently returns two incompatible user shapes depending on
+    # endpoint: the old "legacy" shape has everything flat under a
+    # `legacy` key (or, for some callers, already flattened onto
+    # raw_data directly); the new shape splits fields across `core`,
+    # `avatar`, `location`, `profile_bio`, `relationship_counts`,
+    # `relationship_perspectives`, etc. Detect which shape we got and
+    # read from the right place so callers always get a consistent
+    # flat `legacy` dict back, regardless of which shape X served.
+    legacy_in = raw_data.get('legacy')
+    core = raw_data.get('core') or {}
+    avatar = raw_data.get('avatar') or {}
+    location_ = raw_data.get('location') or {}
+    profile_bio = raw_data.get('profile_bio') or {}
+    dm_permissions = raw_data.get('dm_permissions') or {}
+    media_permissions = raw_data.get('media_permissions') or {}
+    profile_metadata = raw_data.get('profile_metadata') or {}
+    profile_translation = raw_data.get('profile_translation') or {}
+    rel_counts = raw_data.get('relationship_counts') or {}
+    rel_persp = raw_data.get('relationship_perspectives') or {}
+    verification = raw_data.get('verification') or {}
+    website = raw_data.get('website') or {}
+    privacy = raw_data.get('privacy') or {}
+    tweet_counts = raw_data.get('tweet_counts') or {}
+
+    def pick(*, legacy_key=None, new_value=None, default=None):
+        if legacy_in and legacy_key is not None:
+            return legacy_in.get(legacy_key, default)
+        if legacy_key is not None and legacy_key in raw_data:
+            return raw_data.get(legacy_key, default)
+        return new_value if new_value is not None else default
+
     return {
         **raw_data,
-        'rest_id': raw_data['id'],
-        'is_blue_verified': raw_data.get('ext_is_blue_verified'),
+        'rest_id': raw_data.get('rest_id') or raw_data['id'],
+        'is_blue_verified': raw_data.get('ext_is_blue_verified', raw_data.get('is_blue_verified')),
         'legacy': {
-            'created_at': raw_data.get('created_at'),
-            'name': raw_data.get('name'),
-            'screen_name': raw_data.get('screen_name'),
-            'profile_image_url_https': raw_data.get('profile_image_url_https'),
-            'location': raw_data.get('location'),
-            'description': raw_data.get('description'),
-            'entities': raw_data.get('entities'),
-            'pinned_tweet_ids_str': raw_data.get('pinned_tweet_ids_str'),
-            'verified': raw_data.get('verified'),
-            'possibly_sensitive': raw_data.get('possibly_sensitive'),
-            'can_dm': raw_data.get('can_dm'),
-            'can_media_tag': raw_data.get('can_media_tag'),
-            'want_retweets': raw_data.get('want_retweets'),
-            'default_profile': raw_data.get('default_profile'),
-            'default_profile_image': raw_data.get('default_profile_image'),
-            'has_custom_timelines': raw_data.get('has_custom_timelines'),
-            'followers_count': raw_data.get('followers_count'),
-            'fast_followers_count': raw_data.get('fast_followers_count'),
-            'normal_followers_count': raw_data.get('normal_followers_count'),
-            'friends_count': raw_data.get('friends_count'),
-            'favourites_count': raw_data.get('favourites_count'),
-            'listed_count': raw_data.get('listed_count'),
-            'media_count': raw_data.get('media_count'),
-            'statuses_count': raw_data.get('statuses_count'),
-            'is_translator': raw_data.get('is_translator'),
-            'translator_type': raw_data.get('translator_type'),
-            'withheld_in_countries': raw_data.get('withheld_in_countries'),
-            'url': raw_data.get('url'),
-            'profile_banner_url': raw_data.get('profile_banner_url'),
-            'followed_by': raw_data.get('followed_by'),
-            'following': raw_data.get('following')
+            'created_at': pick(legacy_key='created_at', new_value=core.get('created_at')),
+            'name': pick(legacy_key='name', new_value=core.get('name')),
+            'screen_name': pick(legacy_key='screen_name', new_value=core.get('screen_name')),
+            'profile_image_url_https': pick(legacy_key='profile_image_url_https', new_value=avatar.get('image_url')),
+            'location': pick(legacy_key='location', new_value=location_.get('location')),
+            'description': pick(legacy_key='description', new_value=profile_bio.get('description')),
+            'entities': pick(legacy_key='entities', new_value=profile_bio.get('entities')),
+            'pinned_tweet_ids_str': pick(legacy_key='pinned_tweet_ids_str'),
+            'verified': pick(legacy_key='verified', new_value=verification.get('verified')),
+            'possibly_sensitive': pick(legacy_key='possibly_sensitive', new_value=raw_data.get('possibly_sensitive')),
+            'can_dm': pick(legacy_key='can_dm', new_value=dm_permissions.get('can_dm')),
+            'can_media_tag': pick(legacy_key='can_media_tag', new_value=media_permissions.get('can_media_tag')),
+            'want_retweets': pick(legacy_key='want_retweets'),
+            'default_profile': pick(legacy_key='default_profile'),
+            'default_profile_image': pick(legacy_key='default_profile_image'),
+            'has_custom_timelines': pick(legacy_key='has_custom_timelines'),
+            'followers_count': pick(legacy_key='followers_count', new_value=rel_counts.get('followers')),
+            'fast_followers_count': pick(legacy_key='fast_followers_count'),
+            'normal_followers_count': pick(legacy_key='normal_followers_count'),
+            'friends_count': pick(legacy_key='friends_count', new_value=rel_counts.get('following')),
+            'favourites_count': pick(legacy_key='favourites_count'),
+            'listed_count': pick(legacy_key='listed_count'),
+            'media_count': pick(legacy_key='media_count', new_value=tweet_counts.get('media_tweets')),
+            'statuses_count': pick(legacy_key='statuses_count', new_value=tweet_counts.get('tweets')),
+            'is_translator': pick(legacy_key='is_translator'),
+            'translator_type': pick(legacy_key='translator_type', new_value=profile_translation.get('translator_type')),
+            'withheld_in_countries': pick(legacy_key='withheld_in_countries', default=[]),
+            'url': pick(legacy_key='url', new_value=website.get('url')),
+            'profile_banner_url': pick(legacy_key='profile_banner_url', new_value=raw_data.get('banner', {}).get('image_url')),
+            'followed_by': pick(legacy_key='followed_by', new_value=rel_persp.get('followed_by')),
+            'following': pick(legacy_key='following', new_value=rel_persp.get('following')),
+            'protected': pick(legacy_key='protected', new_value=privacy.get('protected')),
+            'profile_interstitial_type': pick(legacy_key='profile_interstitial_type', new_value=profile_metadata.get('profile_interstitial_type')),
         }
     }
 

@@ -2673,7 +2673,7 @@ class Client:
                     continue
                 if user_info[0].get('__typename') == 'UserUnavailable':
                     continue
-                results.append(User(self, user_info[0]))
+                results.append(User(self, build_user_data(user_info[0])))
             elif entry_id.startswith('cursor-bottom'):
                 next_cursor = item['content']['value']
 
